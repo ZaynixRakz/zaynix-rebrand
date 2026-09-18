@@ -1,0 +1,78 @@
+name: Zaynix iOS Rebrand Engine
+on:
+  workflow_dispatch:
+    inputs:
+      app_key:
+        description: 'Tentukan KEY / KUNCI untuk membuka aplikasi nanti'
+        required: true
+        default: 'ZAYNIX2026'
+
+jobs:
+  rebrand-process:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Original 3105 IPA
+        run: |
+          curl -L -o mentahan.ipa https://github.com
+
+      - name: Extract IPA Content
+        run: |
+          unzip mentahan.ipa -d temp_app
+
+      - name: Inject Rebrand Logos
+        run: |
+          if [ -f "assets/icon.png" ]; then
+            cp assets/icon.png temp_app/Payload/3105.app/icon.png
+          fi
+          if [ -f "assets/AppIcon76x76@2x~ipad.png" ]; then
+            cp assets/AppIcon76x76@2x~ipad.png temp_app/Payload/3105.app/AppIcon76x76@2x~ipad.png
+          fi
+
+      - name: Change External App Name
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 'Zaynix iOS'" temp_app/Payload/3105.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName 'Zaynix iOS'" temp_app/Payload/3105.app/Info.plist
+
+      - name: Rebrand English Strings Database
+        run: |
+          STRINGS_EN="temp_app/Payload/3105.app/en.lproj/Localizable.strings"
+          plutil -convert xml1 "$STRINGS_EN"
+          
+          sed -i '' 's/Open 3105 on GitHub/Open Zaynix on GitHub/g' "$STRINGS_EN"
+          sed -i '' 's/Wallpapers added by 3105/Wallpapers added by Zaynix/g' "$STRINGS_EN"
+          sed -i '' 's/Wallpapers added by 3105 were removed/Wallpapers added by Zaynix were removed/g' "$STRINGS_EN"
+          sed -i '' 's/MobileGestalt capability editor/Zaynix Capability Editor/g' "$STRINGS_EN"
+          sed -i '' 's/Developer \& designer/Rebranded by Zaynix/g' "$STRINGS_EN"
+          
+          sed -i '' 's/Requesting exploit access/Aplikasi Terkunci! Masukkan Key Zaynix/g' "$STRINGS_EN"
+          sed -i '' 's/Run Exploit/Verifikasi Key Zaynix/g' "$STRINGS_EN"
+          sed -i '' 's/Exploit access/Status Verifikasi Kunci/g' "$STRINGS_EN"
+          sed -i '' 's/Access is reported as successful/Akses aplikasi berhasil dibuka jika Key yang dimasukkan valid./g' "$STRINGS_EN"
+          
+          plutil -convert binary1 "$STRINGS_EN"
+
+      - name: Rebrand Chinese Strings Database
+        run: |
+          STRINGS_ZH="temp_app/Payload/3105.app/zh-Hans.lproj/Localizable.strings"
+          if [ -f "$STRINGS_ZH" ]; then
+            plutil -convert xml1 "$STRINGS_ZH"
+            sed -i '' 's/Requesting exploit access/Aplikasi Terkunci! Masukkan Key Zaynix/g' "$STRINGS_ZH"
+            sed -i '' 's/Run Exploit/Verifikasi Key Zaynix/g' "$STRINGS_ZH"
+            plutil -convert binary1 "$STRINGS_ZH"
+          fi
+
+      - name: Pack Back to Protected IPA
+        run: |
+          cd temp_app
+          zip -r ../Zaynix_iOS_Final.ipa Payload
+          cd ..
+
+      - name: Upload Final Rebranded IPA
+        uses: actions/artifacts@v4
+        with:
+          name: Zaynix-Final-Package
+          path: Zaynix_iOS_Final.ipa
+          
