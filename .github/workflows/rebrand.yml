@@ -1,4 +1,4 @@
-name: Zaynix iOS Rebrand Engine
+name: Zaynix iOS Rebrand & Build Engine
 on:
   workflow_dispatch:
     inputs:
@@ -8,80 +8,70 @@ on:
         default: 'ZAYNIX2026'
 
 jobs:
-  rebrand-process:
-    runs-on: macos-latest
+  build-and-rebrand:
+    runs-on: macos-14
     steps:
-      - name: Checkout Code
+      - name: Checkout Your Assets
         uses: actions/checkout@v4
 
-      - name: Download Original 3105 IPA
+      - name: Clone Original 3105 Source Code
         run: |
-          # Mengunduh IPA resmi dari repositori asli YangJiiii/3105
-          curl -L -o mentahan.ipa https://github.com
-
-      - name: Extract IPA Content
-        run: |
-          unzip mentahan.ipa -d temp_app
+          git clone https://github.com source_app
 
       - name: Inject Rebrand Logos
         run: |
-          # Otomatis mendeteksi folder .app di dalam Payload tanpa hardcode nama
-          APP_PATH=$(ls -d temp_app/Payload/*.app)
-          
+          # Mengganti semua aset icon utama di source code sebelum di-compile
           if [ -d "assets" ]; then
             if [ -f "assets/icon.png" ]; then
-              cp assets/icon.png "$APP_PATH/icon.png"
+              cp assets/icon.png source_app/3105/Assets.xcassets/AppIcon.appiconset/
             fi
             if [ -f "assets/AppIcon76x76@2x~ipad.png" ]; then
-              cp assets/AppIcon76x76@2x~ipad.png "$APP_PATH/AppIcon76x76@2x~ipad.png"
+              cp assets/AppIcon76x76@2x~ipad.png source_app/3105/Assets.xcassets/AppIcon.appiconset/
             fi
           fi
 
-      - name: Change External App Name
+      - name: Rebrand App Name & Menu Strings
         run: |
-          APP_PATH=$(ls -d temp_app/Payload/*.app)
-          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 'Zaynix iOS'" "$APP_PATH/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleName 'Zaynix iOS'" "$APP_PATH/Info.plist"
-
-      - name: Rebrand English Strings Database
-        run: |
-          APP_PATH=$(ls -d temp_app/Payload/*.app)
-          STRINGS_EN="$APP_PATH/en.lproj/Localizable.strings"
+          # Mengubah display nama aplikasi utama pada file konfigurasi Xcode
+          INFO_PLIST="source_app/3105/Info.plist"
+          if [ -f "$INFO_PLIST" ]; then
+            /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 'Zaynix iOS'" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleName 'Zaynix iOS'" "$INFO_PLIST"
+          fi
           
+          # Mengubah basis data bahasa Inggris internal menu aplikasi
+          STRINGS_EN="source_app/3105/en.lproj/Localizable.strings"
           if [ -f "$STRINGS_EN" ]; then
-            plutil -convert xml1 "$STRINGS_EN"
-            
             sed -i '' 's/Open 3105 on GitHub/Open Zaynix on GitHub/g' "$STRINGS_EN"
             sed -i '' 's/Wallpapers added by 3105/Wallpapers added by Zaynix/g' "$STRINGS_EN"
-            sed -i '' 's/Wallpapers added by 3105 were removed/Wallpapers added by Zaynix were removed/g' "$STRINGS_EN"
             sed -i '' 's/MobileGestalt capability editor/Zaynix Capability Editor/g' "$STRINGS_EN"
             sed -i '' 's/Developer \& designer/Rebranded by Zaynix/g' "$STRINGS_EN"
             
+            # Sistem Layar Kunci bawaan exploit awal
             sed -i '' 's/Requesting exploit access/Aplikasi Terkunci! Masukkan Key Zaynix/g' "$STRINGS_EN"
             sed -i '' 's/Run Exploit/Verifikasi Key Zaynix/g' "$STRINGS_EN"
             sed -i '' 's/Exploit access/Status Verifikasi Kunci/g' "$STRINGS_EN"
             sed -i '' 's/Access is reported as successful/Akses aplikasi berhasil dibuka jika Key yang dimasukkan valid./g' "$STRINGS_EN"
-            
-            plutil -convert binary1 "$STRINGS_EN"
           fi
 
-      - name: Rebrand Chinese Strings Database
+      - name: Compile and Build Signed IPA
         run: |
-          APP_PATH=$(ls -d temp_app/Payload/*.app)
-          STRINGS_ZH="$APP_PATH/zh-Hans.lproj/Localizable.strings"
+          cd source_app
           
-          if [ -f "$STRINGS_ZH" ]; then
-            plutil -convert xml1 "$STRINGS_ZH"
-            sed -i '' 's/Requesting exploit access/Aplikasi Terkunci! Masukkan Key Zaynix/g' "$STRINGS_ZH"
-            sed -i '' 's/Run Exploit/Verifikasi Key Zaynix/g' "$STRINGS_ZH"
-            plutil -convert binary1 "$STRINGS_ZH"
-          fi
-
-      - name: Pack Back to Protected IPA
-        run: |
-          cd temp_app
+          # Membuat arsip build Xcode menggunakan SDK iPhone Simulator / OS generik untuk pembuatan unsigned IPA
+          xcodebuild archive \
+            -project 3105.xcodeproj \
+            -scheme 3105 \
+            -configuration Release \
+            -archivePath ./build/3105.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+          
+          # Mengemas hasil kompilasi binary ke dalam struktur folder Payload standar iOS (.ipa)
+          mkdir -p Payload
+          cp -r ./build/3105.xcarchive/Products/Applications/3105.app ./Payload/
+          mv ./Payload/3105.app ./Payload/Zaynix_iOS.app
           zip -r ../Zaynix_iOS_Final.ipa Payload
-          cd ..
 
       - name: Upload Final Rebranded IPA
         uses: actions/upload-artifact@v4
