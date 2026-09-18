@@ -24,11 +24,13 @@ jobs:
 
       - name: Inject Rebrand Logos
         run: |
-          if [ -f "assets/icon.png" ]; then
-            cp assets/icon.png temp_app/Payload/3105.app/icon.png
-          fi
-          if [ -f "assets/AppIcon76x76@2x~ipad.png" ]; then
-            cp assets/AppIcon76x76@2x~ipad.png temp_app/Payload/3105.app/AppIcon76x76@2x~ipad.png
+          if [ -d "assets" ]; then
+            if [ -f "assets/icon.png" ]; then
+              cp assets/icon.png temp_app/Payload/3105.app/icon.png
+            fi
+            if [ -f "assets/AppIcon76x76@2x~ipad.png" ]; then
+              cp assets/AppIcon76x76@2x~ipad.png temp_app/Payload/3105.app/AppIcon76x76@2x~ipad.png
+            fi
           fi
 
       - name: Change External App Name
@@ -71,7 +73,7 @@ jobs:
           cd ..
 
       - name: Upload Final Rebranded IPA
-        uses: actions/artifacts@v4
+        uses: actions/upload-artifact@v4
         with:
           name: Zaynix-Final-Package
           path: Zaynix_iOS_Final.ipa
