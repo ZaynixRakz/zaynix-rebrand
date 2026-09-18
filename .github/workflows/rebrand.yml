@@ -16,6 +16,7 @@ jobs:
 
       - name: Download Original 3105 IPA
         run: |
+          # Mengunduh IPA resmi dari repositori asli YangJiiii/3105
           curl -L -o mentahan.ipa https://github.com
 
       - name: Extract IPA Content
@@ -24,41 +25,51 @@ jobs:
 
       - name: Inject Rebrand Logos
         run: |
+          # Otomatis mendeteksi folder .app di dalam Payload tanpa hardcode nama
+          APP_PATH=$(ls -d temp_app/Payload/*.app)
+          
           if [ -d "assets" ]; then
             if [ -f "assets/icon.png" ]; then
-              cp assets/icon.png temp_app/Payload/3105.app/icon.png
+              cp assets/icon.png "$APP_PATH/icon.png"
             fi
             if [ -f "assets/AppIcon76x76@2x~ipad.png" ]; then
-              cp assets/AppIcon76x76@2x~ipad.png temp_app/Payload/3105.app/AppIcon76x76@2x~ipad.png
+              cp assets/AppIcon76x76@2x~ipad.png "$APP_PATH/AppIcon76x76@2x~ipad.png"
             fi
           fi
 
       - name: Change External App Name
         run: |
-          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 'Zaynix iOS'" temp_app/Payload/3105.app/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleName 'Zaynix iOS'" temp_app/Payload/3105.app/Info.plist
+          APP_PATH=$(ls -d temp_app/Payload/*.app)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 'Zaynix iOS'" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName 'Zaynix iOS'" "$APP_PATH/Info.plist"
 
       - name: Rebrand English Strings Database
         run: |
-          STRINGS_EN="temp_app/Payload/3105.app/en.lproj/Localizable.strings"
-          plutil -convert xml1 "$STRINGS_EN"
+          APP_PATH=$(ls -d temp_app/Payload/*.app)
+          STRINGS_EN="$APP_PATH/en.lproj/Localizable.strings"
           
-          sed -i '' 's/Open 3105 on GitHub/Open Zaynix on GitHub/g' "$STRINGS_EN"
-          sed -i '' 's/Wallpapers added by 3105/Wallpapers added by Zaynix/g' "$STRINGS_EN"
-          sed -i '' 's/Wallpapers added by 3105 were removed/Wallpapers added by Zaynix were removed/g' "$STRINGS_EN"
-          sed -i '' 's/MobileGestalt capability editor/Zaynix Capability Editor/g' "$STRINGS_EN"
-          sed -i '' 's/Developer \& designer/Rebranded by Zaynix/g' "$STRINGS_EN"
-          
-          sed -i '' 's/Requesting exploit access/Aplikasi Terkunci! Masukkan Key Zaynix/g' "$STRINGS_EN"
-          sed -i '' 's/Run Exploit/Verifikasi Key Zaynix/g' "$STRINGS_EN"
-          sed -i '' 's/Exploit access/Status Verifikasi Kunci/g' "$STRINGS_EN"
-          sed -i '' 's/Access is reported as successful/Akses aplikasi berhasil dibuka jika Key yang dimasukkan valid./g' "$STRINGS_EN"
-          
-          plutil -convert binary1 "$STRINGS_EN"
+          if [ -f "$STRINGS_EN" ]; then
+            plutil -convert xml1 "$STRINGS_EN"
+            
+            sed -i '' 's/Open 3105 on GitHub/Open Zaynix on GitHub/g' "$STRINGS_EN"
+            sed -i '' 's/Wallpapers added by 3105/Wallpapers added by Zaynix/g' "$STRINGS_EN"
+            sed -i '' 's/Wallpapers added by 3105 were removed/Wallpapers added by Zaynix were removed/g' "$STRINGS_EN"
+            sed -i '' 's/MobileGestalt capability editor/Zaynix Capability Editor/g' "$STRINGS_EN"
+            sed -i '' 's/Developer \& designer/Rebranded by Zaynix/g' "$STRINGS_EN"
+            
+            sed -i '' 's/Requesting exploit access/Aplikasi Terkunci! Masukkan Key Zaynix/g' "$STRINGS_EN"
+            sed -i '' 's/Run Exploit/Verifikasi Key Zaynix/g' "$STRINGS_EN"
+            sed -i '' 's/Exploit access/Status Verifikasi Kunci/g' "$STRINGS_EN"
+            sed -i '' 's/Access is reported as successful/Akses aplikasi berhasil dibuka jika Key yang dimasukkan valid./g' "$STRINGS_EN"
+            
+            plutil -convert binary1 "$STRINGS_EN"
+          fi
 
       - name: Rebrand Chinese Strings Database
         run: |
-          STRINGS_ZH="temp_app/Payload/3105.app/zh-Hans.lproj/Localizable.strings"
+          APP_PATH=$(ls -d temp_app/Payload/*.app)
+          STRINGS_ZH="$APP_PATH/zh-Hans.lproj/Localizable.strings"
+          
           if [ -f "$STRINGS_ZH" ]; then
             plutil -convert xml1 "$STRINGS_ZH"
             sed -i '' 's/Requesting exploit access/Aplikasi Terkunci! Masukkan Key Zaynix/g' "$STRINGS_ZH"
